@@ -1,6 +1,8 @@
 import numpy as np
 import random
 
+random.seed(2001)
+
 def generate_random_data(height, width, count):
     x, y = zip(*[generate_img_and_mask(height, width) for i in range(0, count)])
 

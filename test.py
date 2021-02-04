@@ -5,6 +5,28 @@ import numpy as np
 import helper
 import simulation
 
+from torch.utils.data import Dataset, DataLoader
+from torchvision import transforms, datasets, models
+
+import torchvision.utils
+
+from torchsummary import summary
+import torch
+import torch.nn as nn
+import pytorch_unet
+
+from collections import defaultdict
+import torch.nn.functional as F
+from loss import dice_loss
+
+import torch.optim as optim
+from torch.optim import lr_scheduler
+import time
+import copy
+
+import math
+
+
 # Generate some random images
 input_images, target_masks = simulation.generate_random_data(192, 192, count=3)
 
@@ -21,9 +43,7 @@ target_masks_rgb = [helper.masks_to_colorimg(x) for x in target_masks]
 # Left: Input image, Right: Target mask (Ground-truth)
 helper.plot_side_by_side([input_images_rgb, target_masks_rgb])
 #plt.show()
-
-from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms, datasets, models
+plt.clf()
 
 class SimDataset(Dataset):
     def __init__(self, count, transform=None):
@@ -46,8 +66,8 @@ trans = transforms.Compose([
     transforms.ToTensor(),
 ])
 
-train_set = SimDataset(2000, transform = trans)
-val_set = SimDataset(200, transform = trans)
+train_set = SimDataset(2, transform = trans)
+val_set = SimDataset(1, transform = trans)
 
 image_datasets = {
     'train': train_set, 'val': val_set
@@ -66,9 +86,6 @@ dataset_sizes = {
 
 print(dataset_sizes)
 
-
-import torchvision.utils
-
 def reverse_transform(inp):
     inp = inp.numpy().transpose((1, 2, 0))
     inp = np.clip(inp, 0, 1)
@@ -83,13 +100,9 @@ print(inputs.shape, masks.shape)
 for x in [inputs.numpy(), masks.numpy()]:
     print(x.min(), x.max(), x.mean(), x.std())
 
-plt.imshow(reverse_transform(inputs[3]))
-
-
-from torchsummary import summary
-import torch
-import torch.nn as nn
-import pytorch_unet
+plt.imshow(reverse_transform(inputs[1]))
+#plt.show()
+plt.clf()
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -98,10 +111,6 @@ model = model.to(device)
 
 summary(model, input_size=(3, 224, 224))
 
-
-from collections import defaultdict
-import torch.nn.functional as F
-from loss import dice_loss
 
 def calc_loss(pred, target, metrics, bce_weight=0.5):
     bce = F.binary_cross_entropy_with_logits(pred, target)
@@ -124,7 +133,7 @@ def print_metrics(metrics, epoch_samples, phase):
         
     print("{}: {}".format(phase, ", ".join(outputs)))    
 
-def train_model(model, optimizer, scheduler, num_epochs=25):
+def train_model(model, optimizer, scheduler, num_epochs=1):
     best_model_wts = copy.deepcopy(model.state_dict())
     best_loss = 1e10
 
@@ -188,12 +197,6 @@ def train_model(model, optimizer, scheduler, num_epochs=25):
     return model
 
 
-import torch
-import torch.optim as optim
-from torch.optim import lr_scheduler
-import time
-import copy
-
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
 
@@ -206,11 +209,9 @@ optimizer_ft = optim.Adam(model.parameters(), lr=1e-4)
 
 exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=25, gamma=0.1)
 
-model = train_model(model, optimizer_ft, exp_lr_scheduler, num_epochs=40)
+model = train_model(model, optimizer_ft, exp_lr_scheduler, num_epochs=1)
 
 # prediction
-
-import math
 
 model.eval()   # Set model to evaluate mode
 
@@ -235,4 +236,5 @@ pred_rgb = [helper.masks_to_colorimg(x) for x in pred]
 
 helper.plot_side_by_side([input_images_rgb, target_masks_rgb, pred_rgb])
 #plt.show()
-plt.cfs()
+
+print('done')
