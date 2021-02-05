@@ -104,3 +104,4 @@ venv.bak/
 .mypy_cache/
 *.model
 *.png
+trained model/.DS_Store
