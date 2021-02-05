@@ -236,5 +236,5 @@ pred_rgb = [helper.masks_to_colorimg(x) for x in pred]
 
 helper.plot_side_by_side([input_images_rgb, target_masks_rgb, pred_rgb])
 #plt.show()
-
+plt.savefig(os.path.join('prediction.png'))
 print('done')
